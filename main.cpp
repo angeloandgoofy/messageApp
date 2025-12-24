@@ -15,8 +15,10 @@ using namespace std;
 
 #define BACKLOG 10 
 
-struct Message {
 
+struct Message {
+    string username;
+    char* message;
 };
 
 class server {
@@ -26,13 +28,14 @@ private:
     socklen_t addr_size;
     int status;
     int sockfd, new_fd;
+    char* buffer;
+    int len;
 
-    void initiate(char* port) {
+    void initiate(char* node, char* port) {
         hints.ai_family = AF_INET;
         hints.ai_socktype = SOCK_STREAM;
-        hints.ai_flags = AI_PASSIVE;
 
-        status = getaddrinfo(NULL, port, &hints, &res);
+        status = getaddrinfo(node, port, &hints, &res);
         if(status != 0) {
             cout << "Error: getting getaddrinfo main: " << gai_strerror(status);
             return;
@@ -46,29 +49,55 @@ private:
             if(bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
                 closesocket(sockfd);
                 continue;}
+
+           
             break;
         }
+
         freeaddrinfo(res);
         listenAndAccept();
     }
 
     void listenAndAccept(){
-        int lten = listen(sockfd, BACKLOG);
-        if(lten == -1) return;
-
-        addr_size = sizeof their_addr;
-
-        while(true){
-            new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
-            if (new_fd == -1){
-                continue;
-            }
+        if(sockfd == -1) {
+            cout << "unable to create socket " << endl;
+            return;
         }
+        
+        int lten = listen(sockfd, BACKLOG);
+        if(lten == -1) {
+            cout << "Listening could connect" << endl;
+            return;}
+            
+            
+        addr_size = sizeof their_addr;
+        new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
+        if (new_fd == -1){
+            cout << "Error" << endl;
+            perror("accpet");
+            return;
+        }
+        cout << "Hello1" << endl;
+        cout << "server accepting connections " << endl;
+        char buf[1024];
+
+        while (true) {
+            int bytes = recv(new_fd, buf, sizeof(buf) - 1, 0);
+            if (bytes <= 0) {
+                break; 
+            }
+
+            buf[bytes] = '\0';
+            cout << "Client says: " << buf << endl;
+
+            send(new_fd, buf, bytes, 0); 
+        }
+        
     }
 
 public:
-    server(char* port){
-        initiate(port);
+    server(char* node, char* port){
+        initiate(node, port);
     }
     
 };
@@ -77,6 +106,7 @@ class client {
 private:
     struct addrinfo hints{}, *res, *p;
     int status, sockfd;
+    Message msg;
 
     void initiate(char* node, char* port){
         hints.ai_family = AF_INET;
@@ -96,6 +126,8 @@ private:
             if(connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
                 closesocket(sockfd);
                 continue;}
+
+            
             break;
         }
 
@@ -104,8 +136,28 @@ private:
             return;
         }
 
+
         cout << "client connected" << endl;
+
+        sendRecv();
         freeaddrinfo(res);
+    }
+
+    void sendRecv(){
+        char buf[1024];
+        cout << "Enter username: ";
+        getline (cin, msg.username);
+        cout << "Enter username: ";
+        getline (cin, msg.username);
+        while(true){
+            cout <<  msg.username << ": ";
+            msg.message = new char[1000];
+            cin.getline (msg.message, 1000);
+            if (strcmp(msg.message,"quit") == 0){break;}
+            send(sockfd, msg.message, strlen(msg.message), 0);
+
+            delete[] msg.message;
+        }
     }
 
 public:
@@ -130,18 +182,15 @@ int main(int argc, char* argv[]) {
     }
 
     char* mode = argv[2];
-    char* host = argv[3];
+    char* ip = argv[3];
     char* port = argv[4];
 
-    cout << mode << " "<< host << " " << port << endl;
-
-
-    if (strcmp(mode, "server") == 0) {
-        server s(port);
-    } else if (strcmp(mode, "client") == 0) {
-        client c(host, port);
-    } else {
-        cout << "Unknown mode\n";
+    if(strcmp(mode, "server") == 0){
+        server server(ip, port);
+    }else if(strcmp(mode, "client") == 0){
+        client client(ip, port);
+    }else{
+        cout << "Enter valid information" << endl;
     }
 
     WSACleanup();
