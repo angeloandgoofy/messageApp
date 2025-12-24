@@ -31,11 +31,12 @@ private:
     char* buffer;
     int len;
 
-    void initiate(char* node, char* port) {
+    void initiate(char* port) {
         hints.ai_family = AF_INET;
         hints.ai_socktype = SOCK_STREAM;
+        hints.ai_flags = AI_PASSIVE;
 
-        status = getaddrinfo(node, port, &hints, &res);
+        status = getaddrinfo(NULL, port, &hints, &res);
         if(status != 0) {
             cout << "Error: getting getaddrinfo main: " << gai_strerror(status);
             return;
@@ -65,19 +66,21 @@ private:
         }
         
         int lten = listen(sockfd, BACKLOG);
+
         if(lten == -1) {
             cout << "Listening could connect" << endl;
-            return;}
-            
+            return;
+        }
             
         addr_size = sizeof their_addr;
         new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &addr_size);
+        cout << "BLOCKING HERE... " << endl;
         if (new_fd == -1){
             cout << "Error" << endl;
             perror("accpet");
             return;
         }
-        cout << "Hello1" << endl;
+
         cout << "server accepting connections " << endl;
         char buf[1024];
 
@@ -96,8 +99,8 @@ private:
     }
 
 public:
-    server(char* node, char* port){
-        initiate(node, port);
+    server(char* port){
+        initiate(port);
     }
     
 };
@@ -147,15 +150,14 @@ private:
         char buf[1024];
         cout << "Enter username: ";
         getline (cin, msg.username);
-        cout << "Enter username: ";
-        getline (cin, msg.username);
+    
         while(true){
             cout <<  msg.username << ": ";
             msg.message = new char[1000];
             cin.getline (msg.message, 1000);
             if (strcmp(msg.message,"quit") == 0){break;}
             send(sockfd, msg.message, strlen(msg.message), 0);
-
+            
             delete[] msg.message;
         }
     }
@@ -186,7 +188,7 @@ int main(int argc, char* argv[]) {
     char* port = argv[4];
 
     if(strcmp(mode, "server") == 0){
-        server server(ip, port);
+        server server(port);
     }else if(strcmp(mode, "client") == 0){
         client client(ip, port);
     }else{
@@ -196,4 +198,3 @@ int main(int argc, char* argv[]) {
     WSACleanup();
     return 0;
 }
-
