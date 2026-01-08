@@ -126,8 +126,6 @@ private:
             if(connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
                 closesocket(sockfd);
                 continue;}
-
-            
             break;
         }
 
@@ -135,10 +133,6 @@ private:
             cout << "client failed to connect" << endl;
             return;
         }
-
-
-        cout << "client connected" << endl;
-
         sendRecv();
         freeaddrinfo(res);
     }
